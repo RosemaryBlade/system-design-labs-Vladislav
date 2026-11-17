@@ -1,0 +1,1756 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/v1/market/overview": {
+      "get": {
+        "operationId": "MarketController_overview",
+        "summary": "Overview-ul pietei: indici regionali si Stock-uri in tendinte",
+        "description": "NEIMPLEMENTAT: returneaza un exemplu.",
+        "parameters": [
+          {
+            "name": "region",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "us",
+              "enum": [
+                "us",
+                "eu",
+                "asia"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketOverviewDto"
+                },
+                "example": {
+                  "region": "us",
+                  "indices": [
+                    {
+                      "symbol": "SPX",
+                      "name": "S&P 500",
+                      "value": 5921.4,
+                      "changePct": 0.42,
+                      "providerTime": "2026-11-17T14:45:00Z"
+                    },
+                    {
+                      "symbol": "NDX",
+                      "name": "Nasdaq 100",
+                      "value": 20876.1,
+                      "changePct": 0.77,
+                      "providerTime": "2026-11-17T14:45:00Z"
+                    }
+                  ],
+                  "trending": [
+                    {
+                      "symbol": "NVDA",
+                      "name": "NVIDIA Corporation",
+                      "exchange": "NASDAQ",
+                      "sector": "Technology",
+                      "latestPrice": {
+                        "symbol": "NVDA",
+                        "price": 141.2,
+                        "currency": "USD",
+                        "changePct": 3.85,
+                        "providerTime": "2026-11-17T14:45:00Z",
+                        "freshness": "fresh"
+                      }
+                    },
+                    {
+                      "symbol": "TSLA",
+                      "name": "Tesla, Inc.",
+                      "exchange": "NASDAQ",
+                      "sector": "Consumer Cyclical",
+                      "latestPrice": {
+                        "symbol": "TSLA",
+                        "price": 352.5,
+                        "currency": "USD",
+                        "changePct": 2.91,
+                        "providerTime": "2026-11-17T14:28:00Z",
+                        "freshness": "delayed"
+                      }
+                    },
+                    {
+                      "symbol": "AAPL",
+                      "name": "Apple Inc.",
+                      "exchange": "NASDAQ",
+                      "sector": "Technology",
+                      "latestPrice": {
+                        "symbol": "AAPL",
+                        "price": 189.3,
+                        "currency": "USD",
+                        "changePct": 1.24,
+                        "providerTime": "2026-11-17T14:45:00Z",
+                        "freshness": "fresh"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Regiune invalida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_region",
+                    "message": "region must be one of us, eu, asia"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/stocks": {
+      "get": {
+        "operationId": "MarketController_list",
+        "summary": "Rasfoieste, filtreaza si cauta Stock-uri",
+        "description": "Pagina cu cursor; sortare implicita dupa simbol. NEIMPLEMENTAT: returneaza un exemplu.",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Cautare dupa nume sau simbol (2-50 caractere)",
+            "schema": {
+              "example": "appl",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sector",
+            "required": false,
+            "in": "query",
+            "description": "Filtru dupa sector",
+            "schema": {
+              "example": "Technology",
+              "type": "string"
+            }
+          },
+          {
+            "name": "exchange",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "NASDAQ",
+              "enum": [
+                "NASDAQ",
+                "NYSE",
+                "AMEX"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "description": "Pret minim in USD",
+            "schema": {
+              "minimum": 0,
+              "example": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "description": "Pret maxim in USD",
+            "schema": {
+              "minimum": 0,
+              "example": 500,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "symbol",
+              "enum": [
+                "symbol",
+                "name",
+                "-changePct"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Cursor opac primit in nextCursor",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockPageDto"
+                },
+                "examples": {
+                  "filtered": {
+                    "summary": "Pagina filtrata: sector=Technology&exchange=NASDAQ&limit=2",
+                    "value": {
+                      "items": [
+                        {
+                          "symbol": "AAPL",
+                          "name": "Apple Inc.",
+                          "exchange": "NASDAQ",
+                          "sector": "Technology",
+                          "latestPrice": {
+                            "symbol": "AAPL",
+                            "price": 189.3,
+                            "currency": "USD",
+                            "changePct": 1.24,
+                            "providerTime": "2026-11-17T14:45:00Z",
+                            "freshness": "fresh"
+                          }
+                        },
+                        {
+                          "symbol": "NVDA",
+                          "name": "NVIDIA Corporation",
+                          "exchange": "NASDAQ",
+                          "sector": "Technology",
+                          "latestPrice": {
+                            "symbol": "NVDA",
+                            "price": 141.2,
+                            "currency": "USD",
+                            "changePct": 3.85,
+                            "providerTime": "2026-11-17T14:45:00Z",
+                            "freshness": "fresh"
+                          }
+                        }
+                      ],
+                      "nextCursor": "eyJzIjoiTlZEQSJ9"
+                    }
+                  },
+                  "empty": {
+                    "summary": "Rezultat gol: q=zzzz",
+                    "value": {
+                      "items": [],
+                      "nextCursor": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parametri invalizi (limit, minPrice > maxPrice, cursor)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_request",
+                    "message": "limit must not be greater than 100"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/stocks/trending": {
+      "get": {
+        "operationId": "MarketController_trending",
+        "summary": "Stock-uri in tendinte",
+        "description": "Ordonare: changePct descrescator, apoi volumul zilei descrescator, apoi simbol crescator. Doar Stock-uri active cu pret de cel mult 20 min. NEIMPLEMENTAT.",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrendingDto"
+                },
+                "example": {
+                  "items": [
+                    {
+                      "symbol": "NVDA",
+                      "name": "NVIDIA Corporation",
+                      "exchange": "NASDAQ",
+                      "sector": "Technology",
+                      "latestPrice": {
+                        "symbol": "NVDA",
+                        "price": 141.2,
+                        "currency": "USD",
+                        "changePct": 3.85,
+                        "providerTime": "2026-11-17T14:45:00Z",
+                        "freshness": "fresh"
+                      }
+                    },
+                    {
+                      "symbol": "TSLA",
+                      "name": "Tesla, Inc.",
+                      "exchange": "NASDAQ",
+                      "sector": "Consumer Cyclical",
+                      "latestPrice": {
+                        "symbol": "TSLA",
+                        "price": 352.5,
+                        "currency": "USD",
+                        "changePct": 2.91,
+                        "providerTime": "2026-11-17T14:28:00Z",
+                        "freshness": "delayed"
+                      }
+                    },
+                    {
+                      "symbol": "AAPL",
+                      "name": "Apple Inc.",
+                      "exchange": "NASDAQ",
+                      "sector": "Technology",
+                      "latestPrice": {
+                        "symbol": "AAPL",
+                        "price": 189.3,
+                        "currency": "USD",
+                        "changePct": 1.24,
+                        "providerTime": "2026-11-17T14:45:00Z",
+                        "freshness": "fresh"
+                      }
+                    }
+                  ],
+                  "asOf": "2026-11-17T14:28:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "limit in afara intervalului 1-50",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_request",
+                    "message": "limit must not be greater than 50"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/stocks/{symbol}": {
+      "get": {
+        "operationId": "MarketController_detail",
+        "summary": "Detaliile unui Stock",
+        "description": "NEIMPLEMENTAT: returneaza un exemplu.",
+        "parameters": [
+          {
+            "name": "symbol",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "AAPL",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockDetailDto"
+                },
+                "example": {
+                  "symbol": "AAPL",
+                  "name": "Apple Inc.",
+                  "exchange": "NASDAQ",
+                  "sector": "Technology",
+                  "latestPrice": {
+                    "symbol": "AAPL",
+                    "price": 189.3,
+                    "currency": "USD",
+                    "changePct": 1.24,
+                    "providerTime": "2026-11-17T14:45:00Z",
+                    "freshness": "fresh"
+                  },
+                  "isin": "US0378331005",
+                  "active": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Simbol invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_symbol",
+                    "message": "symbol must be 1-10 uppercase letters, digits or dots"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stock necunoscut",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "stock_not_found",
+                    "message": "no stock with symbol ZZZZ"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/stocks/{symbol}/price": {
+      "get": {
+        "operationId": "MarketController_price",
+        "summary": "Ultimul pret acceptat",
+        "description": "Citit din datele acceptate (cache/replica), fara cerere noua la furnizor. NEIMPLEMENTAT.",
+        "parameters": [
+          {
+            "name": "symbol",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "AAPL",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceDto"
+                },
+                "example": {
+                  "symbol": "AAPL",
+                  "price": 189.3,
+                  "currency": "USD",
+                  "changePct": 1.24,
+                  "providerTime": "2026-11-17T14:45:00Z",
+                  "freshness": "fresh"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Simbol invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_symbol",
+                    "message": "symbol must be 1-10 uppercase letters, digits or dots"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stock necunoscut",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "stock_not_found",
+                    "message": "no stock with symbol ZZZZ"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/stocks/{symbol}/history": {
+      "get": {
+        "operationId": "MarketController_history",
+        "summary": "Istoricul zilnic al preturilor",
+        "description": "Interval inclusiv, maximum 366 de zile. NEIMPLEMENTAT.",
+        "parameters": [
+          {
+            "name": "symbol",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "AAPL",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Data de inceput (inclusiv), YYYY-MM-DD",
+            "schema": {
+              "example": "2026-10-17",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Data de sfarsit (inclusiv), maximum 366 zile dupa from",
+            "schema": {
+              "example": "2026-11-14",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceHistoryDto"
+                },
+                "example": {
+                  "symbol": "AAPL",
+                  "points": [
+                    {
+                      "date": "2026-11-13",
+                      "open": 186.1,
+                      "high": 188,
+                      "low": 185.4,
+                      "close": 187.2,
+                      "volume": 48210000
+                    },
+                    {
+                      "date": "2026-11-14",
+                      "open": 187.2,
+                      "high": 190.1,
+                      "low": 186.5,
+                      "close": 189.3,
+                      "volume": 51234000
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Interval invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_range",
+                    "message": "from must be before to and the range at most 366 days"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stock necunoscut",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "stock_not_found",
+                    "message": "no stock with symbol ZZZZ"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "market"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/me/watchlist": {
+      "get": {
+        "operationId": "WatchlistController_get",
+        "summary": "Citeste Watchlist-ul privat al Utilizatorului",
+        "description": "Proprietarul este luat din token (sub). Citire de pe lider (Read-Your-Writes). NEIMPLEMENTAT.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Succes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistDto"
+                },
+                "examples": {
+                  "one": {
+                    "summary": "Watchlist cu un element",
+                    "value": {
+                      "items": [
+                        {
+                          "symbol": "TSLA",
+                          "name": "Tesla, Inc.",
+                          "addedAt": "2026-11-17T15:02:11Z",
+                          "latestPrice": {
+                            "symbol": "TSLA",
+                            "price": 352.5,
+                            "currency": "USD",
+                            "changePct": 2.91,
+                            "providerTime": "2026-11-17T14:28:00Z",
+                            "freshness": "delayed"
+                          }
+                        }
+                      ],
+                      "itemCount": 1,
+                      "maxItems": 50
+                    }
+                  },
+                  "empty": {
+                    "summary": "Watchlist gol",
+                    "value": {
+                      "items": [],
+                      "itemCount": 0,
+                      "maxItems": 50
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "watchlist"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/me/watchlist/items": {
+      "post": {
+        "operationId": "WatchlistController_add",
+        "summary": "Adauga un Stock in Watchlist",
+        "description": "Idempotent: daca simbolul exista deja, returneaza 200 cu elementul existent. NEIMPLEMENTAT.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddWatchlistItemRequest"
+              },
+              "examples": {
+                "tsla": {
+                  "value": {
+                    "symbol": "TSLA"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exista deja (idempotent)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistItemDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Adaugat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistItemDto"
+                },
+                "example": {
+                  "symbol": "TSLA",
+                  "name": "Tesla, Inc.",
+                  "addedAt": "2026-11-17T15:02:11Z",
+                  "latestPrice": {
+                    "symbol": "TSLA",
+                    "price": 352.5,
+                    "currency": "USD",
+                    "changePct": 2.91,
+                    "providerTime": "2026-11-17T14:28:00Z",
+                    "freshness": "delayed"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Simbol invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_symbol",
+                    "message": "symbol must be 1-10 uppercase letters, digits or dots"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stock necunoscut",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "stock_not_found",
+                    "message": "no stock with symbol ZZZZ"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Watchlist-ul are deja 50 de elemente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "watchlist_full",
+                    "message": "watchlist already has 50 items"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "watchlist"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/me/watchlist/items/{symbol}": {
+      "delete": {
+        "operationId": "WatchlistController_remove",
+        "summary": "Elimina un Stock din Watchlist",
+        "description": "Idempotent: 204 si daca simbolul nu era in lista. NEIMPLEMENTAT.",
+        "parameters": [
+          {
+            "name": "symbol",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "TSLA",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Eliminat (sau nu exista)"
+          },
+          "400": {
+            "description": "Simbol invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "invalid_symbol",
+                    "message": "symbol must be 1-10 uppercase letters, digits or dots"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token lipsa, invalid sau expirat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "a valid Bearer token is required"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limita de frecventa depasita; vezi antetul Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "too many requests, retry after 5 seconds"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Datele nu pot fi furnizate acum (stocare sau date mai vechi de 20 min)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": {
+                    "code": "unavailable",
+                    "message": "market data is temporarily unavailable"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "watchlist"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Personal Investment Dashboard API",
+    "description": "API-ul clientului pentru date de piata si Watchlist-ul privat (Lab 5). Versiunea este in cale (/v1). Erorile au forma { \"error\": { \"code\", \"message\" } }.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "https://api.dashboard.example",
+      "description": "Productie"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Token de acces emis de Identity Provider"
+      }
+    },
+    "schemas": {
+      "ErrorBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "invalid_symbol",
+            "description": "Cod stabil, folosit de client pentru a alege comportamentul"
+          },
+          "message": {
+            "type": "string",
+            "example": "symbol must be 1-10 uppercase letters, digits or dots",
+            "description": "Explicatie pentru om"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "IndexCardDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "SPX"
+          },
+          "name": {
+            "type": "string",
+            "example": "S&P 500"
+          },
+          "value": {
+            "type": "number",
+            "example": 5921.4
+          },
+          "changePct": {
+            "type": "number",
+            "example": 0.42
+          },
+          "providerTime": {
+            "type": "string",
+            "example": "2026-11-17T14:45:00Z"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "value",
+          "changePct",
+          "providerTime"
+        ]
+      },
+      "PriceDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "AAPL"
+          },
+          "price": {
+            "type": "number",
+            "example": 189.3,
+            "description": "Ultimul pret acceptat"
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD"
+          },
+          "changePct": {
+            "type": "number",
+            "example": 1.24,
+            "description": "Schimbarea procentuala fata de inchiderea anterioara"
+          },
+          "providerTime": {
+            "type": "string",
+            "example": "2026-11-17T14:45:00Z",
+            "description": "Momentul observatiei furnizorului (provider_time)"
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "fresh",
+              "delayed"
+            ],
+            "example": "fresh",
+            "description": "Derivat: fresh <= 15 min, delayed 15-20 min. Peste 20 min se returneaza 503."
+          }
+        },
+        "required": [
+          "symbol",
+          "price",
+          "currency",
+          "changePct",
+          "providerTime",
+          "freshness"
+        ]
+      },
+      "StockSummaryDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "AAPL"
+          },
+          "name": {
+            "type": "string",
+            "example": "Apple Inc."
+          },
+          "exchange": {
+            "type": "string",
+            "example": "NASDAQ"
+          },
+          "sector": {
+            "type": "string",
+            "example": "Technology"
+          },
+          "latestPrice": {
+            "nullable": true,
+            "description": "null daca nu exista un pret acceptat de cel mult 20 min",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PriceDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "exchange",
+          "sector"
+        ]
+      },
+      "MarketOverviewDto": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string",
+            "example": "us"
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndexCardDto"
+            }
+          },
+          "trending": {
+            "description": "Primele 5 Stock-uri in tendinte",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockSummaryDto"
+            }
+          }
+        },
+        "required": [
+          "region",
+          "indices",
+          "trending"
+        ]
+      },
+      "StockPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockSummaryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "object",
+            "example": "eyJzIjoiQUFQTCJ9",
+            "nullable": true,
+            "description": "Cursor opac pentru pagina urmatoare; null daca nu mai exista rezultate"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "TrendingDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Ordonate dupa changePct descrescator, apoi volum descrescator, apoi simbol",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StockSummaryDto"
+            }
+          },
+          "asOf": {
+            "type": "string",
+            "example": "2026-11-17T14:45:00Z",
+            "description": "Cel mai vechi providerTime din lista"
+          }
+        },
+        "required": [
+          "items",
+          "asOf"
+        ]
+      },
+      "StockDetailDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "AAPL"
+          },
+          "name": {
+            "type": "string",
+            "example": "Apple Inc."
+          },
+          "exchange": {
+            "type": "string",
+            "example": "NASDAQ"
+          },
+          "sector": {
+            "type": "string",
+            "example": "Technology"
+          },
+          "latestPrice": {
+            "nullable": true,
+            "description": "null daca nu exista un pret acceptat de cel mult 20 min",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PriceDto"
+              }
+            ]
+          },
+          "isin": {
+            "type": "object",
+            "example": "US0378331005",
+            "nullable": true,
+            "description": "null daca furnizorul nu are ISIN"
+          },
+          "active": {
+            "type": "boolean",
+            "example": true,
+            "description": "false pentru Stock-uri delistate, pastrate pentru istoric"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "exchange",
+          "sector",
+          "isin",
+          "active"
+        ]
+      },
+      "DailyPriceDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-11-14",
+            "description": "Ziua de tranzactionare (ora bursei)"
+          },
+          "open": {
+            "type": "number",
+            "example": 187.2
+          },
+          "high": {
+            "type": "number",
+            "example": 190.1
+          },
+          "low": {
+            "type": "number",
+            "example": 186.5
+          },
+          "close": {
+            "type": "number",
+            "example": 189.3
+          },
+          "volume": {
+            "type": "number",
+            "example": 51234000
+          }
+        },
+        "required": [
+          "date",
+          "open",
+          "high",
+          "low",
+          "close",
+          "volume"
+        ]
+      },
+      "PriceHistoryDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "AAPL"
+          },
+          "points": {
+            "description": "Ordonat crescator dupa data",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyPriceDto"
+            }
+          }
+        },
+        "required": [
+          "symbol",
+          "points"
+        ]
+      },
+      "WatchlistItemDto": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "TSLA"
+          },
+          "name": {
+            "type": "string",
+            "example": "Tesla, Inc."
+          },
+          "addedAt": {
+            "type": "string",
+            "example": "2026-11-17T15:02:11Z",
+            "description": "Momentul adaugarii (controlat de server)"
+          },
+          "latestPrice": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PriceDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "addedAt"
+        ]
+      },
+      "WatchlistDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Ordonate dupa addedAt descrescator",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WatchlistItemDto"
+            }
+          },
+          "itemCount": {
+            "type": "number",
+            "example": 1,
+            "description": "Derivat: numarul de elemente (maximum 50)"
+          },
+          "maxItems": {
+            "type": "number",
+            "example": 50
+          }
+        },
+        "required": [
+          "items",
+          "itemCount",
+          "maxItems"
+        ]
+      },
+      "AddWatchlistItemRequest": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "TSLA",
+            "description": "1-10 caractere: litere mari, cifre sau punct"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    }
+  }
+}
